@@ -1,63 +1,162 @@
-//
-//  ScheduleView.swift
-//  StudyFlow
-//
-//  Created by 지경태 on 6/14/26.
-//
-
 import SwiftUI
 
 struct ScheduleView: View {
 
-    @State private var schedules = [
-        "컴퓨터 과학",
-        "수학"
-    ]
+    @State private var schedules: [Schedule] = []
 
     @State private var newSchedule = ""
+
+    @State private var selectedDate = Date()
 
     var body: some View {
 
         NavigationStack {
 
-            VStack {
+            ZStack {
 
-                HStack {
+                Color(
+                    red: 0.96,
+                    green: 0.97,
+                    blue: 0.99
+                )
+                .ignoresSafeArea()
 
-                    TextField(
-                        "일정 입력",
-                        text: $newSchedule
-                    )
-                    .textFieldStyle(.roundedBorder)
+                VStack {
 
-                    Button("추가") {
+                    VStack(spacing: 12) {
 
-                        if !newSchedule.isEmpty {
-                            schedules.append(newSchedule)
+                        TextField(
+                            "일정 입력",
+                            text: $newSchedule
+                        )
+                        .textFieldStyle(
+                            .roundedBorder
+                        )
+
+                        DatePicker(
+                            "일정 날짜",
+                            selection: $selectedDate,
+                            displayedComponents: [
+                                .date,
+                                .hourAndMinute
+                            ]
+                        )
+
+                        Button("일정 추가") {
+
+                            guard
+                                !newSchedule.isEmpty
+                            else {
+                                return
+                            }
+
+                            let schedule =
+                            Schedule(
+                                title: newSchedule,
+                                date: selectedDate
+                            )
+
+                            schedules.append(
+                                schedule
+                            )
+
+                            schedules.sort {
+                                $0.date < $1.date
+                            }
+
+                            ScheduleStorage
+                                .shared
+                                .save(
+                                    schedules: schedules
+                                )
+
                             newSchedule = ""
+                        }
+                        .buttonStyle(
+                            .borderedProminent
+                        )
+                    }
+                    .padding()
+
+                    List {
+
+                        ForEach(
+                            schedules
+                        ) { schedule in
+
+                            VStack(
+                                alignment: .leading,
+                                spacing: 6
+                            ) {
+
+                                Text(
+                                    schedule.title
+                                )
+                                .font(.headline)
+
+                                Text(
+                                    formattedDate(
+                                        schedule.date
+                                    )
+                                )
+                                .font(.caption)
+                                .foregroundColor(
+                                    .gray
+                                )
+                            }
+                        }
+
+                        .onDelete {
+                            indexSet in
+
+                            schedules.remove(
+                                atOffsets: indexSet
+                            )
+
+                            ScheduleStorage
+                                .shared
+                                .save(
+                                    schedules: schedules
+                                )
                         }
                     }
                 }
-                .padding()
+            }
 
-                List {
+            .navigationTitle("일정")
 
-                    ForEach(
-                        schedules,
-                        id: \.self
-                    ) { item in
+            .onAppear {
 
-                        Text(item)
-                    }
-                    .onDelete { indexSet in
-                        schedules.remove(
-                            atOffsets: indexSet
-                        )
-                    }
+                schedules =
+                ScheduleStorage
+                    .shared
+                    .load()
+
+                schedules.sort {
+                    $0.date < $1.date
                 }
             }
-            .navigationTitle("일정")
         }
+    }
+
+    func formattedDate(
+        _ date: Date
+    ) -> String {
+
+        let formatter =
+        DateFormatter()
+
+        formatter.locale =
+        Locale(
+            identifier: "ko_KR"
+        )
+
+        formatter.dateFormat =
+        "yyyy.MM.dd HH:mm"
+
+        return formatter.string(
+            from: date
+        )
     }
 }
 

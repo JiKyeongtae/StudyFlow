@@ -1,12 +1,22 @@
 import SwiftUI
 
-struct Exam: Identifiable {
+struct Exam: Identifiable, Codable {
 
 
-let id = UUID()
+let id: UUID
 
 var subject: String
 var date: Date
+
+init(
+    id: UUID = UUID(),
+    subject: String,
+    date: Date
+) {
+    self.id = id
+    self.subject = subject
+    self.date = date
+}
 
 
 }
@@ -33,45 +43,59 @@ var body: some View {
             )
             .ignoresSafeArea()
 
-            ScrollView {
+            VStack {
 
-                VStack(spacing: 20) {
+                VStack(spacing: 12) {
 
-                    VStack(spacing: 12) {
+                    TextField(
+                        "과목명을 입력하세요",
+                        text: $subject
+                    )
+                    .textFieldStyle(.roundedBorder)
 
-                        TextField(
-                            "과목명을 입력하세요",
-                            text: $subject
-                        )
-                        .textFieldStyle(.roundedBorder)
+                    DatePicker(
+                        "시험 날짜",
+                        selection: $selectedDate,
+                        displayedComponents: .date
+                    )
 
-                        DatePicker(
-                            "시험 날짜",
-                            selection: $selectedDate,
-                            displayedComponents: .date
-                        )
+                    Button {
 
-                        Button {
-
-                            if !subject.isEmpty {
-
-                                exams.append(
-                                    Exam(
-                                        subject: subject,
-                                        date: selectedDate
-                                    )
-                                )
-
-                                subject = ""
-                            }
-
-                        } label: {
-
-                            Text("시험 추가")
-                                .frame(maxWidth: .infinity)
+                        guard !subject.isEmpty else {
+                            return
                         }
-                        .buttonStyle(.borderedProminent)
+
+                        exams.append(
+                            Exam(
+                                subject: subject,
+                                date: selectedDate
+                            )
+                        )
+
+                        exams.sort {
+                            $0.date < $1.date
+                        }
+
+                        ExamStorage
+                            .shared
+                            .save(exams: exams)
+
+                        subject = ""
+
+                    } label: {
+
+                        Text("시험 추가")
+                            .frame(
+                                maxWidth: .infinity
+                            )
                     }
+                    .buttonStyle(
+                        .borderedProminent
+                    )
+                }
+                .padding()
+
+                List {
 
                     ForEach(exams) { exam in
 
@@ -79,24 +103,56 @@ var body: some View {
                             subject: exam.subject,
                             dday: daysUntil(exam.date)
                         )
+                        .listRowBackground(
+                            Color.clear
+                        )
+                    }
+                    .onDelete {
+
+                        exams.remove(
+                            atOffsets: $0
+                        )
+
+                        ExamStorage
+                            .shared
+                            .save(exams: exams)
                     }
                 }
-                .padding()
+                .scrollContentBackground(.hidden)
             }
         }
         .navigationTitle("시험")
+
+        .onAppear {
+
+            exams =
+            ExamStorage
+                .shared
+                .load()
+
+            exams.sort {
+                $0.date < $1.date
+            }
+        }
     }
 }
 
-func daysUntil(_ date: Date) -> Int {
+func daysUntil(
+    _ date: Date
+) -> Int {
 
-    let calendar = Calendar.current
+    let calendar =
+    Calendar.current
 
     let start =
-    calendar.startOfDay(for: Date())
+    calendar.startOfDay(
+        for: Date()
+    )
 
     let end =
-    calendar.startOfDay(for: date)
+    calendar.startOfDay(
+        for: date
+    )
 
     return calendar
         .dateComponents(

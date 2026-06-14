@@ -1,283 +1,394 @@
-
 import SwiftUI
 
 struct HomeView: View {
 
-var body: some View {
+    @State private var remainingAssignments = 0
 
-    NavigationStack {
+    @State private var completedAssignments = 0
 
-        ZStack {
+    @State private var totalAssignments = 0
 
-            Color(
-                red: 0.96,
-                green: 0.97,
-                blue: 0.99
-            )
-            .ignoresSafeArea()
+    @State private var nearestExamName = "시험 없음"
 
-            ScrollView {
+    @State private var nearestExamDday = "-"
 
-                VStack(spacing: 24) {
+    @State private var schedules: [Schedule] = []
 
-                    VStack(alignment: .leading, spacing: 8) {
+    var body: some View {
 
-                        Text("2026년 6월")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+        NavigationStack {
 
-                        Text("좋은 아침입니다")
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
+            ZStack {
 
-                        Text("오늘도 계획적인 하루를 시작해보세요")
-                            .foregroundColor(.gray)
-                    }
-                    .frame(
-                        maxWidth: .infinity,
-                        alignment: .leading
-                    )
+                Color(
+                    red: 0.96,
+                    green: 0.97,
+                    blue: 0.99
+                )
+                .ignoresSafeArea()
 
-                    HStack(spacing: 16) {
+                ScrollView {
 
-                        StatCard(
-                            number: "5",
-                            title: "오늘 수업",
-                            icon: "book.fill"
-                        )
-
-                        StatCard(
-                            number: "3",
-                            title: "남은 과제",
-                            icon: "doc.fill"
-                        )
-                    }
-
-                    SectionCard(title: "오늘의 일정") {
+                    VStack(spacing: 24) {
 
                         VStack(
                             alignment: .leading,
-                            spacing: 14
+                            spacing: 8
                         ) {
 
-                            ScheduleRow(
-                                time: "09:00",
-                                subject: "컴퓨터 과학"
+                            Text("2026년 6월")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+
+                            Text("좋은 아침입니다 👋")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+
+                            Text("오늘도 계획적인 하루를 시작해보세요")
+                                .foregroundColor(.gray)
+                        }
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .leading
+                        )
+
+                        HStack(spacing: 16) {
+
+                            StatCard(
+                                number: "5",
+                                title: "오늘 수업",
+                                icon: "book.fill"
                             )
 
-                            ScheduleRow(
-                                time: "11:00",
-                                subject: "수학"
-                            )
-
-                            ScheduleRow(
-                                time: "14:00",
-                                subject: "물리 실험"
+                            StatCard(
+                                number: "\(remainingAssignments)",
+                                title: "남은 과제",
+                                icon: "doc.fill"
                             )
                         }
-                    }
 
-                    SectionCard(title: "다가오는 시험") {
+                        SectionCard(
+                            title: "과제 진행률"
+                        ) {
 
-                        VStack(
-                            spacing: 12
+                            VStack(
+                                alignment: .leading,
+                                spacing: 12
+                            ) {
+
+                                ProgressView(
+                                    value: Double(completedAssignments),
+                                    total: Double(
+                                        max(totalAssignments, 1)
+                                    )
+                                )
+
+                                Text(
+                                    "\(completedAssignments)/\(totalAssignments) 완료"
+                                )
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            }
+                        }
+
+                        SectionCard(
+                            title: "오늘의 일정"
+                        ) {
+
+                            if schedules.isEmpty {
+
+                                Text("등록된 일정이 없습니다")
+                                    .foregroundColor(.gray)
+
+                            } else {
+
+                                ForEach(
+                                    schedules.prefix(3)
+                                ) { schedule in
+
+                                    ScheduleHomeRow(
+                                        title: schedule.title,
+                                        date: schedule.date
+                                    )
+                                }
+                            }
+                        }
+
+                        SectionCard(
+                            title: "다가오는 시험"
                         ) {
 
                             ExamRow(
-                                title: "자료구조",
-                                dday: "D-4"
-                            )
-
-                            ExamRow(
-                                title: "운영체제",
-                                dday: "D-10"
+                                title: nearestExamName,
+                                dday: nearestExamDday
                             )
                         }
                     }
+                    .padding()
                 }
-                .padding()
+            }
+            .navigationTitle("StudyFlow")
+
+            .onAppear {
+
+                let assignments =
+                AssignmentStorage.shared.load()
+
+                remainingAssignments =
+                assignments.filter {
+                    !$0.completed
+                }.count
+
+                completedAssignments =
+                assignments.filter {
+                    $0.completed
+                }.count
+
+                totalAssignments =
+                assignments.count
+
+                schedules =
+                ScheduleStorage.shared.load()
+
+                schedules.sort {
+                    $0.date < $1.date
+                }
+
+                let exams =
+                ExamStorage.shared.load()
+
+                if let nearest =
+                    exams.sorted(
+                        by: { $0.date < $1.date }
+                    ).first {
+
+                    let calendar =
+                    Calendar.current
+
+                    let start =
+                    calendar.startOfDay(
+                        for: Date()
+                    )
+
+                    let end =
+                    calendar.startOfDay(
+                        for: nearest.date
+                    )
+
+                    let days =
+                    calendar
+                        .dateComponents(
+                            [.day],
+                            from: start,
+                            to: end
+                        )
+                        .day ?? 0
+
+                    nearestExamName =
+                    nearest.subject
+
+                    nearestExamDday =
+                    "D-\(days)"
+
+                } else {
+
+                    nearestExamName =
+                    "시험 없음"
+
+                    nearestExamDday =
+                    "-"
+                }
             }
         }
-        .navigationTitle("StudyFlow")
     }
-}
-
-
 }
 
 struct StatCard: View {
 
+    let number: String
+    let title: String
+    let icon: String
 
-let number: String
-let title: String
-let icon: String
+    var body: some View {
 
-var body: some View {
+        VStack(spacing: 12) {
 
-    VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(.white)
 
-        Image(systemName: icon)
-            .font(.title2)
-            .foregroundColor(.white)
+            Text(number)
+                .font(.system(size: 36))
+                .fontWeight(.bold)
+                .foregroundColor(.white)
 
-        Text(number)
-            .font(.system(size: 36))
-            .fontWeight(.bold)
-            .foregroundColor(.white)
+            Text(title)
+                .foregroundColor(.white)
+                .fontWeight(.medium)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 150)
 
-        Text(title)
-            .foregroundColor(.white)
-            .fontWeight(.medium)
-    }
-    .frame(maxWidth: .infinity)
-    .frame(height: 150)
-
-    .background(
-        LinearGradient(
-            colors: [
-                Color(
-                    red: 0.29,
-                    green: 0.56,
-                    blue: 0.89
-                ),
-                Color(
-                    red: 0.20,
-                    green: 0.45,
-                    blue: 0.80
-                )
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(
+                        red: 0.29,
+                        green: 0.56,
+                        blue: 0.89
+                    ),
+                    Color(
+                        red: 0.20,
+                        green: 0.45,
+                        blue: 0.80
+                    )
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         )
-    )
 
-    .cornerRadius(24)
+        .cornerRadius(24)
 
-    .shadow(
-        color: .black.opacity(0.12),
-        radius: 10,
-        x: 0,
-        y: 5
-    )
-}
-
-
+        .shadow(
+            color: .black.opacity(0.12),
+            radius: 10,
+            x: 0,
+            y: 5
+        )
+    }
 }
 
 struct SectionCard<Content: View>: View {
 
+    let title: String
+    let content: Content
 
-let title: String
-let content: Content
-
-init(
-    title: String,
-    @ViewBuilder content: () -> Content
-) {
-    self.title = title
-    self.content = content()
-}
-
-var body: some View {
-
-    VStack(
-        alignment: .leading,
-        spacing: 16
+    init(
+        title: String,
+        @ViewBuilder content: () -> Content
     ) {
-
-        Text(title)
-            .font(.title3)
-            .fontWeight(.bold)
-
-        content
+        self.title = title
+        self.content = content()
     }
-    .frame(
-        maxWidth: .infinity,
-        alignment: .leading
-    )
 
-    .padding()
+    var body: some View {
 
-    .background(
-        RoundedRectangle(
-            cornerRadius: 24
+        VStack(
+            alignment: .leading,
+            spacing: 16
+        ) {
+
+            Text(title)
+                .font(.title3)
+                .fontWeight(.bold)
+
+            content
+        }
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
         )
-        .fill(Color.white)
-    )
+        .padding()
 
-    .shadow(
-        color: .black.opacity(0.08),
-        radius: 10,
-        x: 0,
-        y: 4
-    )
-}
+        .background(
+            RoundedRectangle(
+                cornerRadius: 24
+            )
+            .fill(Color.white)
+        )
 
-
-}
-
-struct ScheduleRow: View {
-
-
-let time: String
-let subject: String
-
-var body: some View {
-
-    HStack {
-
-        Text(time)
-            .fontWeight(.bold)
-
-        Divider()
-
-        Text(subject)
-
-        Spacer()
+        .shadow(
+            color: .black.opacity(0.08),
+            radius: 10,
+            x: 0,
+            y: 4
+        )
     }
 }
 
+struct ScheduleHomeRow: View {
 
+    let title: String
+
+    let date: Date
+
+    var body: some View {
+
+        HStack {
+
+            VStack(
+                alignment: .leading,
+                spacing: 4
+            ) {
+
+                Text(title)
+                    .fontWeight(.semibold)
+
+                Text(
+                    formattedDate(date)
+                )
+                .font(.caption)
+                .foregroundColor(.gray)
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
+    func formattedDate(
+        _ date: Date
+    ) -> String {
+
+        let formatter =
+        DateFormatter()
+
+        formatter.locale =
+        Locale(identifier: "ko_KR")
+
+        formatter.dateFormat =
+        "MM/dd HH:mm"
+
+        return formatter.string(
+            from: date
+        )
+    }
 }
 
 struct ExamRow: View {
 
+    let title: String
+    let dday: String
 
-let title: String
-let dday: String
+    var body: some View {
 
-var body: some View {
+        HStack {
 
-    HStack {
+            VStack(alignment: .leading) {
 
-        VStack(
-            alignment: .leading
-        ) {
+                Text(title)
+                    .fontWeight(.semibold)
 
-            Text(title)
-                .fontWeight(.semibold)
+                Text("가장 가까운 시험")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
 
-            Text("시험 예정")
-                .font(.caption)
-                .foregroundColor(.gray)
+            Spacer()
+
+            Text(dday)
+                .fontWeight(.bold)
+                .foregroundColor(.blue)
         }
-
-        Spacer()
-
-        Text(dday)
-            .fontWeight(.bold)
-            .foregroundColor(.blue)
+        .padding()
+        .background(
+            Color.blue.opacity(0.08)
+        )
+        .cornerRadius(16)
     }
-    .padding()
-    .background(
-        Color.blue.opacity(0.08)
-    )
-    .cornerRadius(16)
-}
-
-
 }
 
 #Preview {
-HomeView()
+    HomeView()
 }
