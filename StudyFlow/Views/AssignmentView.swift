@@ -63,6 +63,11 @@ struct AssignmentView: View {
                                 ? "checkmark.circle.fill"
                                 : "circle"
                             )
+                            .foregroundColor(
+                                assignment.completed
+                                ? .green
+                                : .gray
+                            )
 
                             VStack(
                                 alignment: .leading
@@ -90,6 +95,19 @@ struct AssignmentView: View {
                                 assignment
                             )
                         }
+                    }
+                    .onDelete {
+                        indexSet in
+
+                        assignments.remove(
+                            atOffsets: indexSet
+                        )
+
+                        AssignmentStorage
+                            .shared
+                            .save(
+                                assignments: assignments
+                            )
                     }
                 }
             }
@@ -137,11 +155,24 @@ struct AssignmentView: View {
         _ date: Date
     ) -> Int {
 
+        let calendar =
         Calendar.current
+
+        let start =
+        calendar.startOfDay(
+            for: Date()
+        )
+
+        let end =
+        calendar.startOfDay(
+            for: date
+        )
+
+        return calendar
             .dateComponents(
                 [.day],
-                from: Date(),
-                to: date
+                from: start,
+                to: end
             )
             .day ?? 0
     }

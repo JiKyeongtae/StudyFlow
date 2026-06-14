@@ -13,6 +13,8 @@ struct HomeView: View {
     @State private var nearestExamDday = "-"
 
     @State private var schedules: [Schedule] = []
+    
+    @State private var todayClassCount = 0
 
     var body: some View {
 
@@ -36,11 +38,11 @@ struct HomeView: View {
                             spacing: 8
                         ) {
 
-                            Text("2026년 6월")
+                            Text(currentMonth())
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
 
-                            Text("좋은 아침입니다 👋")
+                            Text(greeting())
                                 .font(.largeTitle)
                                 .fontWeight(.bold)
 
@@ -55,7 +57,7 @@ struct HomeView: View {
                         HStack(spacing: 16) {
 
                             StatCard(
-                                number: "5",
+                                number: "\(todayClassCount)",
                                 title: "오늘 수업",
                                 icon: "book.fill"
                             )
@@ -153,7 +155,43 @@ struct HomeView: View {
                 schedules.sort {
                     $0.date < $1.date
                 }
+                
+                let timetables =
+                TimetableStorage.shared.load()
 
+                let weekday =
+                Calendar.current.component(
+                    .weekday,
+                    from: Date()
+                )
+
+                let todayDay: String
+
+                switch weekday {
+
+                case 2:
+                    todayDay = "월"
+
+                case 3:
+                    todayDay = "화"
+
+                case 4:
+                    todayDay = "수"
+
+                case 5:
+                    todayDay = "목"
+
+                case 6:
+                    todayDay = "금"
+
+                default:
+                    todayDay = ""
+                }
+
+                todayClassCount =
+                timetables.filter {
+                    $0.day == todayDay
+                }.count
                 let exams =
                 ExamStorage.shared.load()
 
@@ -388,6 +426,39 @@ struct ExamRow: View {
         .cornerRadius(16)
     }
 }
+
+func currentMonth() -> String {
+
+    let formatter = DateFormatter()
+
+    formatter.dateFormat = "yyyy년 M월"
+
+    return formatter.string(
+        from: Date()
+    )
+}
+
+func greeting() -> String {
+
+    let hour =
+    Calendar.current.component(
+        .hour,
+        from: Date()
+    )
+
+    switch hour {
+
+    case 5..<12:
+        return "좋은 아침입니다"
+
+    case 12..<18:
+        return "좋은 오후입니다"
+
+    default:
+        return "좋은 저녁입니다"
+    }
+}
+
 
 #Preview {
     HomeView()
