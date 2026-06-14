@@ -194,7 +194,7 @@ StudyFlow
 
 # 발표 영상
 
-(발표 영상 링크 첨부)
+https://youtube.com/shorts/CjiO0ERwecs?feature=share
 
 # GitHub Repository
 
