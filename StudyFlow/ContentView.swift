@@ -8,14 +8,36 @@
 import SwiftUI
 
 struct ContentView: View {
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+
+        TabView {
+
+            HomeView()
+                .tabItem {
+                    Label("홈", systemImage: "house.fill")
+                }
+
+            ScheduleView()
+                .tabItem {
+                    Label("일정", systemImage: "calendar")
+                }
+
+            AssignmentView()
+                .tabItem {
+                    Label("과제", systemImage: "doc.text")
+                }
+
+            ExamView()
+                .tabItem {
+                    Label("시험", systemImage: "graduationcap")
+                }
+
+            TimetableView()
+                .tabItem {
+                    Label("시간표", systemImage: "tablecells")
+                }
         }
-        .padding()
     }
 }
 
